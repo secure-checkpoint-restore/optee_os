@@ -45,6 +45,8 @@
 #include <tee/uuid.h>
 #include <util.h>
 
+//rex_do 2018-12-3
+#include <kernel/generic_boot.h>
 #define SHM_CACHE_ATTRS	\
 	(uint32_t)(core_mmu_is_shm_cached() ?  OPTEE_SMC_SHM_CACHED : 0)
 
@@ -215,6 +217,12 @@ static TEE_Result get_open_session_meta(size_t num_params,
 	return TEE_SUCCESS;
 }
 
+//rex_do 2018-12-3
+#define BOOT_OS_UUID { 0xcafe03b2, 0xaa3c, 0x4536, \
+                { 0xbb, 0xe4, 0xfc, 0x78, 0x71, 0x6d, 0x05, 0x05} }
+
+static const TEE_UUID boot_os_uuid = BOOT_OS_UUID;
+
 static void entry_open_session(struct thread_smc_args *smc_args,
 			       struct optee_msg_arg *arg, uint32_t num_params)
 {
@@ -230,6 +238,11 @@ static void entry_open_session(struct thread_smc_args *smc_args,
 				    &clnt_id);
 	if (res != TEE_SUCCESS)
 		goto out;
+	//rex_do 2018-12-3
+	if (memcmp(&boot_os_uuid, &uuid, sizeof(TEE_UUID)) == 0)
+	{
+		final_boot();
+	}
 
 	res = copy_in_params(arg->params + num_meta, num_params - num_meta,
 			     &param);

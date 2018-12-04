@@ -227,8 +227,6 @@ void __noreturn __utee_entry(unsigned long func, unsigned long session_id,
 	switch (func) {
 	case UTEE_ENTRY_FUNC_OPEN_SESSION:
 		res = entry_open_session(session_id, up);
-		//rex_do 2018-12-1
-		utee_boot();
 		break;
 	case UTEE_ENTRY_FUNC_CLOSE_SESSION:
 		res = entry_close_session(session_id);
