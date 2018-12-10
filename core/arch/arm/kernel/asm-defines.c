@@ -103,5 +103,10 @@ DEFINES
 		offsetof(struct thread_core_local, abt_stack_va_end));
 	DEFINE(THREAD_CORE_LOCAL_X0, offsetof(struct thread_core_local, x[0]));
 	DEFINE(THREAD_CORE_LOCAL_X2, offsetof(struct thread_core_local, x[2]));
+
+	//rex_do 2018-12-9
+	DEFINE(PCB_REGS_SP, offsetof(struct proc, regs.sp));
+	DEFINE(PCB_REGS_X0, offsetof(struct proc, regs.x[0]));
+	DEFINE(PCB_REGS_X1, offsetof(struct proc, regs.x[1]));
 #endif /*ARM64*/
 }

@@ -35,6 +35,9 @@
 #include <types_ext.h>
 #include <util.h>
 
+#include <kernel/proc.h>
+#include <signed_hdr.h>
+
 TAILQ_HEAD(tee_cryp_state_head, tee_cryp_state);
 TAILQ_HEAD(tee_obj_head, tee_obj);
 TAILQ_HEAD(tee_storage_enum_head, tee_storage_enum);
@@ -101,4 +104,6 @@ static inline TEE_Result tee_ta_register_ta_store(
 }
 #endif
 
+//rex_do 2018-12-9
+TEE_Result tee_ta_load(struct shdr *signed_ta, struct proc *proc);
 #endif /*KERNEL_USER_TA_H*/

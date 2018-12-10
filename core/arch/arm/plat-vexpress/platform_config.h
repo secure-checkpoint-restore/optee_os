@@ -260,7 +260,9 @@
 #error "Unknown platform flavor"
 #endif
 
-#define CFG_TEE_RAM_VA_SIZE	(1024 * 1024)
+//rex_do 2018-12-10
+//#define CFG_TEE_RAM_VA_SIZE	(1024 * 1024)
+#define CFG_TEE_RAM_VA_SIZE   (2 * 1024 * 1024)
 
 #ifndef CFG_TEE_LOAD_ADDR
 #define CFG_TEE_LOAD_ADDR	CFG_TEE_RAM_START

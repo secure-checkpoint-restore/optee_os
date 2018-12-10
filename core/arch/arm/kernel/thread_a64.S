@@ -849,3 +849,30 @@ LOCAL_FUNC elx_fiq , :
 	native_intr_handler	fiq
 #endif
 END_FUNC elx_fiq
+
+//rex_do 2018-12-9
+/* int call_resume(struct pcb_regs *regs, uint32_t spsr) */
+FUNC call_resume , :
+	sub sp, sp, #96 // make room for gregs x19..x30, 12*8 bytes
+	store_xregs sp, 0, 19, 30
+	mov x19, sp
+	mov x20, x1
+	load_xregs x0, PCB_REGS_SP, 1, 3
+	mov	sp, x1
+	msr	elr_el1, x2
+	msr	spsr_el1, x3
+	ldr	x1, [x0, PCB_REGS_X1]
+	ldr	x0, [x0, PCB_REGS_X0]
+	eret
+END_FUNC call_resume
+
+FUNC proc_load_entry , :
+	bl	tee_ta_exec
+
+	mov sp, x19
+	msr spsr_el1, x20
+	load_xregs sp, 0, 19, 30
+	add sp, sp, #96 // free memory for gregs x19..x30
+	msr elr_el1, x30
+	eret
+END_FUNC proc_load_entry

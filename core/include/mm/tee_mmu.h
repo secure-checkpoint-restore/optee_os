@@ -120,4 +120,17 @@ uint32_t tee_mmu_user_get_cache_attr(struct user_ta_ctx *utc, void *va);
 
 TEE_Result tee_mmu_register_shm(paddr_t pa, size_t len, uint32_t attr);
 
+//rex_do 2018-12-9
+void sn_tee_mmu_set_ctx(struct proc *proc);
+
+uintptr_t sn_tee_mmu_get_load_addr(const struct run_info *const run);
+
+TEE_Result sn_tee_mmu_init(struct run_info *run);
+
+void sn_tee_mmu_map_clear(struct run_info* run);
+
+void sn_tee_mmu_map_stack(struct run_info *run);
+
+TEE_Result sn_tee_mmu_map_add_segment(struct proc *proc, struct mobj *mobj,
+				   size_t offs, size_t size, uint32_t prot);
 #endif

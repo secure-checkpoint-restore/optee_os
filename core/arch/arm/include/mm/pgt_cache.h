@@ -130,4 +130,7 @@ static inline void pgt_set_used_entries(struct pgt *pgt __unused,
 
 #endif
 
+//rex_do 2018-12-9
+bool sn_pgt_alloc(struct pgt_cache *pgt_cache,
+	       vaddr_t begin, vaddr_t last);
 #endif /*MM_PGT_CACHE_H*/

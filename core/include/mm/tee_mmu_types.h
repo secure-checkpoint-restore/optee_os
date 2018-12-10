@@ -89,4 +89,13 @@ struct tee_mmu_info {
 	vaddr_t ta_private_vmem_end;
 };
 
+//rex_do 2018-12-9
+struct run_info {
+    uint64_t entry;
+    uint64_t load_addr;
+    struct mobj *mobj_code;
+    struct mobj *mobj_stack;
+    struct tee_mmu_info *mmu;
+};
+
 #endif

@@ -154,6 +154,11 @@ def main():
 	tee_pageable_fname = args.tee_pageable_bin
 	pager_input_size   = os.path.getsize(tee_pager_fname);
 	paged_input_size   = os.path.getsize(tee_pageable_fname);
+	
+	#rex_do 2018-12-9
+	procA_size	   = os.path.getsize("./test_proc.ta");
+	procB_size	   = os.path.getsize("./test_proc.ta");
+
 	hash_size          = paged_input_size / (4 * 1024) * \
 			     hashlib.sha256().digest_size
 
@@ -162,9 +167,10 @@ def main():
 			repr(paged_input_size))
 		sys.exit(1)
 
+	#rex_do 2018-12-9
 	init_size	  = pager_input_size + \
 			    min(init_bin_size, paged_input_size) + \
-			    hash_size
+			    hash_size + procA_size + procB_size
 	paged_size	  = paged_input_size - \
 			    min(init_bin_size, paged_input_size)
 
@@ -172,6 +178,10 @@ def main():
 		outf = args.out
 		write_header_v1(outf, init_size, args, paged_size)
 		append_to(outf, 0, tee_pager_fname)
+		#rex_do 2018-12-9
+		append_to(outf, 0, './test_proc.ta')
+		append_to(outf, 0, './test_proc.ta')
+
 		append_to(outf, 0, tee_pageable_fname, init_bin_size)
 		append_hashes(outf, tee_pageable_fname)
 		append_to(outf, init_bin_size, tee_pageable_fname)
@@ -185,6 +195,10 @@ def main():
 	if args.out_pager_v2 is not None:
 		outf = args.out_pager_v2
 		append_to(outf, 0, tee_pager_fname)
+		#rex_do 2018-12-9
+		append_to(outf, 0, './test_proc.ta')
+		append_to(outf, 0, './test_proc.ta')
+
 		append_to(outf, 0, tee_pageable_fname, init_bin_size)
 		append_hashes(outf, tee_pageable_fname)
 		outf.close()

@@ -498,4 +498,8 @@ void core_mmu_set_discovered_nsec_ddr(struct core_mmu_phys_mem *start,
 struct mobj **core_sdp_mem_create_mobjs(void);
 #endif
 
+//rex_do 2018-12-9
+void sn_core_mmu_create_user_map(struct proc *proc);
+
+void sn_core_mmu_get_user_pgdir(struct core_mmu_table_info *pgd_info, struct proc *proc);
 #endif /* CORE_MMU_H */

@@ -613,3 +613,160 @@ TEE_Result tee_ta_init_user_ta_session(const TEE_UUID *uuid,
 		s->ctx->ops = &user_ta_ops;
 	return res;
 }
+
+//rex_do 2018-12-9
+static TEE_Result sn_config_initial_paging(struct proc *proc __unused)
+{
+	return TEE_SUCCESS;
+}
+
+static TEE_Result sn_config_final_paging(struct proc *proc)
+{
+	struct run_info* run = &proc->run_info;
+	struct tee_mmu_info* mmu = run->mmu;
+	void *va = (void *)mmu->ta_private_vmem_start;
+	size_t vasize = mmu->ta_private_vmem_end -
+			mmu->ta_private_vmem_start;
+
+	cache_op_inner(DCACHE_AREA_CLEAN, va, vasize);
+	cache_op_inner(ICACHE_AREA_INVALIDATE, va, vasize);
+	return TEE_SUCCESS;
+}
+
+static TEE_Result sn_load_elf_segments(struct proc *proc,
+			struct elf_load_state *elf_state, bool init_attrs)
+{
+	TEE_Result res;
+	uint32_t mattr;
+	size_t idx = 0;
+	struct run_info* run = &proc->run_info;
+
+	sn_tee_mmu_map_clear(run);
+
+	/*
+	 * Add stack segment
+	 */
+	sn_tee_mmu_map_stack(run);
+
+	/*
+	 * Add code segment
+	 */
+	while (true) {
+		vaddr_t offs;
+		size_t size;
+		uint32_t flags;
+		uint32_t type;
+
+		res = elf_load_get_next_segment(elf_state, &idx, &offs, &size,
+						&flags, &type);
+		if (res == TEE_ERROR_ITEM_NOT_FOUND)
+			break;
+		if (res != TEE_SUCCESS)
+			return res;
+
+		if (type == PT_LOAD) {
+			mattr = elf_flags_to_mattr(flags, init_attrs);
+			res = sn_tee_mmu_map_add_segment(proc, run->mobj_code,
+						      offs, size, mattr);
+			if (res != TEE_SUCCESS)
+				return res;
+		}
+	}
+
+	if (init_attrs)
+		return sn_config_initial_paging(proc);
+	else
+		return sn_config_final_paging(proc);
+}
+
+static TEE_Result sn_load_elf(struct proc *proc, struct shdr *shdr)
+{
+	TEE_Result res;
+	struct elf_load_state *elf_state = NULL;
+	struct ta_head *ta_head;
+	size_t vasize;
+	struct run_info *run = &proc->run_info;
+	
+	res = sn_elf_load_init(&elf_state, shdr);
+	if(res != TEE_SUCCESS)
+		goto out;
+	
+	res = sn_elf_load_head(elf_state, sizeof(struct ta_head), (void*)&ta_head, &vasize);
+	if (res != TEE_SUCCESS)
+		goto out;
+	run->mobj_code = alloc_ta_mem(vasize);
+	if (!run->mobj_code) {
+		res = TEE_ERROR_OUT_OF_MEMORY;
+		goto out;
+	}
+
+	/* Temporary assignment to setup memory mapping */
+	//utc->ctx.flags = TA_FLAG_USER_MODE | TA_FLAG_EXEC_DDR;
+
+	/* Ensure proper aligment of stack */
+	run->mobj_stack = alloc_ta_mem(ROUNDUP(ta_head->stack_size,
+					       STACK_ALIGNMENT));
+	if (!run->mobj_stack) {
+		res = TEE_ERROR_OUT_OF_MEMORY;
+		goto out;
+	}
+
+	/*
+	 * Map physical memory into TA virtual memory
+	 */
+	res = sn_tee_mmu_init(run);
+	if (res != TEE_SUCCESS)
+		goto out;
+	
+	res = sn_load_elf_segments(proc, elf_state, true /* init attrs */);
+	if (res != TEE_SUCCESS)
+		goto out;
+	sn_tee_mmu_set_ctx(proc);
+	
+	res = sn_elf_load_body(elf_state, sn_tee_mmu_get_load_addr(run));
+	if (res != TEE_SUCCESS)
+		goto out;
+	/*
+	ta_head = (struct ta_head*)sn_tee_mmu_get_load_addr(run);
+	run->entry = ta_head->entry.ptr64;*/
+	/*
+	 * Replace the init attributes with attributes used when the TA is
+	 * running.
+	*/
+	res = sn_load_elf_segments(proc, elf_state, false);
+out:
+	sn_elf_load_final(elf_state);
+	return res;
+}
+
+TEE_Result tee_ta_load(struct shdr *signed_ta, struct proc *proc)
+{
+	TEE_Result res;
+	uaddr_t usr_stack;
+	
+	struct ta_head *ta_head;
+	struct run_info *run = &proc->run_info;
+	res = sn_load_elf(proc, signed_ta);
+	if (res != TEE_SUCCESS)
+		return res;
+	sn_tee_mmu_set_ctx(proc);
+    
+    	proc->uregs->spsr = read_daif() & (SPSR_64_DAIF_MASK << SPSR_64_DAIF_SHIFT);
+	
+	usr_stack = (uaddr_t)(run->mmu->regions[0].va) + run->mobj_stack->size;
+
+	ta_head = (struct ta_head*)sn_tee_mmu_get_load_addr(run);
+	run->entry = ta_head->entry.ptr64;
+	
+	proc->uregs->x[29] = 0;
+	proc->uregs->sp = usr_stack;
+	proc->uregs->pc = run->entry;
+	/* CPACR_EL1, Architectural Feature Access Control Register */
+	vfp_enable();
+	DMSG("ta address: %lx\n", (uint64_t)signed_ta);
+	DMSG("ELF load address 0x%x", (uint32_t)sn_tee_mmu_get_load_addr(run));
+
+
+	return TEE_SUCCESS;
+
+}

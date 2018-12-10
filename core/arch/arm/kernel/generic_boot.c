@@ -52,6 +52,8 @@
 
 #include <platform_config.h>
 
+#include <kernel/proc.h>
+
 #if !defined(CFG_WITH_ARM_TRUSTED_FW)
 #include <sm/sm.h>
 #endif
@@ -769,29 +771,25 @@ paddr_t generic_boot_core_hpen(void)
 static void mask_ns_irq(void)
 {
         uint32_t daif = read_daif();
-        DMSG("###DEBUG### before mask irq: daif: %x", daif);
         daif |= DAIF_I;
         write_daif(daif);
         daif = read_daif();
-        DMSG("###DEBUG### after mask irq: daif: %x", daif);
 }
-
+/*
 static void enable_secure_timer(void)
 {
         uint64_t cval; 
         uint32_t ctl = 0;
 
 
-        /* The timer will fire every 0.5 second */
         cval = read_cntpct_el0() + (read_cntfrq_el0() * 10);
         write_cntps_cval_el1(cval);
 
-        /* Enable the secure physical timer */
         ctl |= 1 << 0;
         write_cntps_ctl_el1(ctl);
 
-        DMSG("###DEBUG### enable secure timer");
 }
+*/
 
 static void idle(void)
 {
@@ -804,8 +802,12 @@ static void idle(void)
 //TODO
 void final_boot(void)
 {
-    DMSG("###DEBUG### enter boot");
-    mask_ns_irq();
-    enable_secure_timer();
+    DMSG("\n------------------------------------------------\n");
+    DMSG("CPU %x switching to secure world final boot\n", (uint32_t)get_core_pos());
+    mask_ns_irq(); 
+    //TODO
+    //enable_secure_timer();
+
+    proc_clr_boot();
     idle();
 }
