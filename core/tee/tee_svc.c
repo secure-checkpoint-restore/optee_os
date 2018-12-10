@@ -44,6 +44,7 @@
 #include <kernel/pseudo_ta.h>
 #include <mm/mobj.h>
 
+
 vaddr_t tee_svc_uref_base;
 
 void syscall_log(const void *buf __maybe_unused, size_t len __maybe_unused)
@@ -1112,59 +1113,8 @@ TEE_Result syscall_set_ta_time(const TEE_Time *mytime)
 	return tee_time_set_ta_time((const void *)&s->ctx->uuid, &t);
 }
 //rex_do 2018-12-2
-void enable_secure_timer(void);
-
-void enable_secure_timer(void)
-{
-	uint64_t cval;
-	uint32_t ctl = 0;
-
-	
-	/* The timer will fire every 0.5 second */
-	cval = read_cntpct_el0() + (read_cntfrq_el0() * 10);
-	write_cntps_cval_el1(cval);
-
-	/* Enable the secure physical timer */
-	ctl |= 1 << 0; 
-	write_cntps_ctl_el1(ctl);
-	
-	DMSG("###DEBUG### enable secure timer");
-}
-
-//rex_do 2018-12-1
-void mask_ns_irq(void);
-void mask_ns_irq(void)
-{
-	uint32_t daif = read_daif();
-        DMSG("###DEBUG### before mask irq: daif: %x", daif);
-        daif |= DAIF_I;
-        write_daif(daif);
-        daif = read_daif();
-        DMSG("###DEBUG### after mask irq: daif: %x", daif);
-}
 
 void syscall_boot(void)
 {
-	//int num = 0;
-	static bool flag = true;
-	if(flag)
-	{
-		DMSG("###DEBUG### enter boot");
-		mask_ns_irq();
-		enable_secure_timer();
-
-		flag = false;
-		while(1)
-		{
-			asm volatile("wfi");
-			/*
-			if(num % 1000000 == 1)
-			{
-				DMSG("###DEBUG### syscall_boot");
-
-			}
-			num++;
-			*/
-		}
-	}
+	DMSG("syscall boot");
 }

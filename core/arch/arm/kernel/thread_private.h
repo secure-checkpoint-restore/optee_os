@@ -259,6 +259,10 @@ void thread_check_canaries(void);
 
 void __thread_std_smc_entry(struct thread_smc_args *args);
 
+//rex_do 2018-12-9
+int call_resume(struct pcb_regs *regs, uint32_t spsr);
+
+void proc_load_entry(void);
 #endif /*ASM*/
 
 #endif /*THREAD_PRIVATE_H*/

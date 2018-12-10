@@ -906,3 +906,28 @@ enum core_mmu_fault core_mmu_get_fault_type(uint32_t fault_descr)
 	}
 }
 #endif /*ARM64*/
+
+//rex_do 2018-12-9
+void sn_core_mmu_create_user_map(struct proc *proc)
+{
+	struct core_mmu_table_info dir_info;
+
+	COMPILE_TIME_ASSERT(sizeof(uint64_t) * XLAT_TABLE_ENTRIES == PGT_SIZE);
+
+	sn_core_mmu_get_user_pgdir(&dir_info, proc);
+	memset(dir_info.table, 0, PGT_SIZE);
+	sn_core_mmu_populate_user_map(&dir_info, proc);
+	proc->map = virt_to_phys(dir_info.table) | TABLE_DESC;
+}
+
+void sn_core_mmu_get_user_pgdir(struct core_mmu_table_info *pgd_info,
+					struct proc *proc)
+{
+	vaddr_t va_range_base;
+	void *tbl;
+	assert(proc->endpoint >= 0);
+	tbl = xlat_tables_ul1[proc->endpoint];
+
+	core_mmu_get_user_va_range(&va_range_base, NULL);
+	core_mmu_set_info_table(pgd_info, 2, va_range_base, tbl);
+}

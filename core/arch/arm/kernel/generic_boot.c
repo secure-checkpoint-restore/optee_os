@@ -52,6 +52,8 @@
 
 #include <platform_config.h>
 
+#include <kernel/proc.h>
+
 #if !defined(CFG_WITH_ARM_TRUSTED_FW)
 #include <sm/sm.h>
 #endif
@@ -766,8 +768,46 @@ paddr_t generic_boot_core_hpen(void)
 #endif
 
 //rex_do 2018-12-3
+static void mask_ns_irq(void)
+{
+        uint32_t daif = read_daif();
+        daif |= DAIF_I;
+        write_daif(daif);
+        daif = read_daif();
+}
+/*
+static void enable_secure_timer(void)
+{
+        uint64_t cval; 
+        uint32_t ctl = 0;
+
+
+        cval = read_cntpct_el0() + (read_cntfrq_el0() * 10);
+        write_cntps_cval_el1(cval);
+
+        ctl |= 1 << 0;
+        write_cntps_ctl_el1(ctl);
+
+}
+*/
+
+static void idle(void)
+{
+	while(1)
+	{
+		asm volatile("wfi");
+	}	
+}
+
 //TODO
 void final_boot(void)
 {
-	DMSG("final_boot");
+    DMSG("\n------------------------------------------------\n");
+    DMSG("CPU %x switching to secure world final boot\n", (uint32_t)get_core_pos());
+    mask_ns_irq(); 
+    //TODO
+    //enable_secure_timer();
+
+    proc_clr_boot();
+    idle();
 }

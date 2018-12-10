@@ -43,5 +43,9 @@ static inline bool core_mmap_is_end_of_table(const struct tee_mmap_region *mm)
 	return mm->type == MEM_AREA_END;
 }
 
+//rex_do 2018-12-9
+void sn_core_mmu_populate_user_map(struct core_mmu_table_info *dir_info,
+				struct proc *proc);
+
 #endif /*CORE_MMU_PRIVATE_H*/
 

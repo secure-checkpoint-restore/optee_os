@@ -53,6 +53,8 @@
 
 #include "thread_private.h"
 
+#include <kernel/proc.h>
+
 #ifdef CFG_WITH_ARM_TRUSTED_FW
 #define STACK_TMP_OFFS		0
 #else
@@ -90,6 +92,9 @@
 struct thread_ctx threads[CFG_NUM_THREADS];
 
 static struct thread_core_local thread_core_local[CFG_TEE_CORE_NB_CORE];
+
+//rex_do 2018-12-8
+static struct cpu_local tee_cpu;
 
 #ifdef CFG_WITH_STACK_CANARIES
 #ifdef ARM32
@@ -1400,4 +1405,11 @@ struct mobj *thread_rpc_alloc_payload(size_t size, uint64_t *cookie)
 void thread_rpc_free_payload(uint64_t cookie, struct mobj *mobj)
 {
 	thread_rpc_free(OPTEE_MSG_RPC_SHM_TYPE_APPL, cookie, mobj);
+}
+
+//rex_do 2018-12-8
+void init_tee_cpu(void)
+{
+	tee_cpu.cur_proc = -1;
+	tee_cpu.tmp_stack = GET_STACK(stack_tmp[get_core_pos()]);
 }
