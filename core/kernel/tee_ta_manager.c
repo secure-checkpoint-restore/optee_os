@@ -834,7 +834,6 @@ void tee_ta_update_session_utime_resume(void)
 #endif
 
 //rex_do 2018-12-9
-//TODO
 extern struct proc procs[];
 
 TEE_Result tee_ta_exec(void* ta_addr, size_t pn)
@@ -848,6 +847,6 @@ TEE_Result tee_ta_exec(void* ta_addr, size_t pn)
 		DMSG("tee_ta_load failed 0x%x", res);
 		return res;
 	}
-	//res = enqueue(proc);
+	res = enqueue(proc);
 	return res;
 }

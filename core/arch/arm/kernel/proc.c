@@ -66,6 +66,7 @@ static void unlock_global(void)
 	cpu_spin_unlock(&proc_global_lock);
 }
 
+
 static void init_canaries(void)
 {
 #ifdef CFG_WITH_STACK_CANARIES
@@ -85,7 +86,7 @@ static void init_canaries(void)
 #ifndef CFG_WITH_PAGER
 	INIT_CANARY(stack_proc);
 #endif
-#endif/*CFG_WITH_STACK_CANARIES*/
+#endif
 }
 
 static void init_proc(void)
@@ -158,25 +159,89 @@ static int proc_alloc(void *ta)
 	return call_resume(&procs[i].regs, spsr);
 }
  
-void proc_clr_boot(void)
+void proc_clr_init(void)
 {
-	int res;
-	init_tee_cpu();
 	init_canaries();
 	init_proc();
-	res = proc_alloc((void*)0x6100000ul);
-	if(res != 0)
-	{
-		DMSG("proc_alloc error!\n");
-	}
-	
-	res = proc_alloc((void*)0x61216c4ul);
-	if(res != 0)
-	{
-		DMSG("proc_alloc error!\n");
-	}
-	DMSG("finish\n");
-
 }
 
+void proc_schedule(void) 
+{
+	struct cpu_local *cpu = get_tee_cpu();
+	struct core_mmu_user_map map = { 0 };
+	struct proc *proc = NULL;
+	struct list_head* lh;
+	int i;
+	for(i = 0; i < NUM_PRIO; i++) 
+	{
+		lh = &run_queues[i]; 
+		if(lh->next != lh) 
+		{
+			proc = container_of(lh->next, struct proc, link);
+			lh->next = lh->next->next;
+			lh->next->prev = lh;
+			break;
+		}
+	}
+	
+	if(proc == NULL)
+	{
+		DMSG("no proc to run, cpu is going to idle\n");
+		return;
+	}
+	
+	assert(proc->endpoint >= 0);
+	cpu->cur_proc = proc->endpoint;
+	map.user_map = proc->map;
+	core_mmu_set_user_map(&map);
+	proc_resume(proc->uregs);
+}
 
+struct proc *get_cur_proc(void)
+{
+	struct cpu_local *cpu = get_tee_cpu();
+	int cur = cpu->cur_proc;
+	if(cur >= 0 && cur < NUM_PROCS && procs[cur].endpoint == cur)
+	{
+		return &procs[cur];
+	}
+	return NULL;
+}
+
+// insert tail
+int enqueue(struct proc* p) 
+{
+	struct list_head *lh;
+	struct list_head *lp;
+
+	lh = &run_queues[p->prio];
+	lp = &p->link;
+	lp->prev = lh->prev;
+	lp->next = lh;
+	lh->prev->next = lp;
+	lh->prev = lp; 
+	return 0;
+}
+
+void run(void)
+{
+	int res;
+	res = proc_alloc((void*)0x6100000ul);
+        if(res != 0)
+        {
+                DMSG("proc_alloc error!\n");
+        }
+        /*      
+        res = proc_alloc((void*)0x61216c4ul);
+        if(res != 0)
+        {
+                DMSG("proc_alloc error!\n");
+        }
+        */
+        proc_schedule();		
+}
+
+void rex_debug(uint64_t address)
+{
+	DMSG("rex debug 0x%lx\n", address);
+}

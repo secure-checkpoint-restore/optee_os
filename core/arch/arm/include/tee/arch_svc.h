@@ -40,4 +40,8 @@ void tee_svc_handler(struct thread_svc_regs *regs);
 uint32_t tee_svc_sys_return_helper(uint32_t ret, bool panic,
 			uint32_t panic_code, struct thread_svc_regs *regs);
 
+//rex_do 2018-12-12
+struct proc;
+void tee_proc_svc_handler(struct proc *proc);
+
 #endif /*TEE_ARCH_SVC_H*/

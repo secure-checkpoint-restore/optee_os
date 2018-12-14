@@ -45,8 +45,6 @@ void generic_boot_init_secondary(unsigned long nsec_entry);
 void main_init_gic(void);
 void main_secondary_init_gic(void);
 
-void final_boot(void);
-
 void init_sec_mon(unsigned long nsec_entry);
 
 const struct thread_handlers *generic_boot_get_handlers(void);
@@ -63,4 +61,6 @@ int generic_boot_core_release(size_t core_idx, paddr_t entry);
 paddr_t generic_boot_core_hpen(void);
 #endif
 
+//rex_do 2018-12-14
+void final_boot(void) __noreturn;
 #endif /* KERNEL_GENERIC_BOOT_H */

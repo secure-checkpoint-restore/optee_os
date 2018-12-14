@@ -44,7 +44,7 @@
 		mov	x\tmp1, #THREAD_CTX_SIZE
 		madd	x\res, x\tmp0, x\tmp1, x\res
 	.endm
-
+	
 	.section .text.thread_asm
 LOCAL_FUNC vector_std_smc_entry , :
 	sub	sp, sp, #THREAD_SMC_ARGS_SIZE
@@ -405,6 +405,7 @@ SErrorSPx:
 	.align	7
 el0_sync_a64:
 	store_xregs sp, THREAD_CORE_LOCAL_X0, 0, 3
+	
 	mrs	x2, esr_el1
 	mrs	x3, sp_el0
 	lsr	x2, x2, #ESR_EC_SHIFT
@@ -858,16 +859,27 @@ FUNC call_resume , :
 	mov x19, sp
 	mov x20, x1
 	load_xregs x0, PCB_REGS_SP, 1, 3
-	mov	sp, x1
-	msr	elr_el1, x2
-	msr	spsr_el1, x3
-	ldr	x1, [x0, PCB_REGS_X1]
-	ldr	x0, [x0, PCB_REGS_X0]
+	mov sp, x1
+	msr elr_el1, x2
+	msr spsr_el1, x3
+	ldr x1, [x0, #PCB_REGS_X1]
+	ldr x0, [x0, #PCB_REGS_X0]
 	eret
 END_FUNC call_resume
 
+/* void proc_resume(struct pcb_regs *regs) */
+FUNC proc_resume , :
+	load_xregs x0, UREGS_SP, 1, 3
+	mov sp, x1
+	msr elr_el1, x2
+	msr spsr_el1, x3
+	load_xregs x0, UREGS_X1, 1, 30
+	ldr x0, [x0, UREGS_X0]
+	eret
+END_FUNC proc_resume
+
 FUNC proc_load_entry , :
-	bl	tee_ta_exec
+	bl tee_ta_exec
 
 	mov sp, x19
 	msr spsr_el1, x20
@@ -876,3 +888,4 @@ FUNC proc_load_entry , :
 	msr elr_el1, x30
 	eret
 END_FUNC proc_load_entry
+

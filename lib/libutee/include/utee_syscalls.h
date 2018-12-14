@@ -51,8 +51,6 @@
  * length fields.
  */
 
-//rex_do 2018-12-1
-void utee_boot(void) __noreturn;
 
 void utee_return(unsigned long ret) __noreturn;
 
@@ -301,5 +299,8 @@ TEE_Result utee_se_channel_close(unsigned long c);
 TEE_Result utee_cache_operation(void *va, size_t l, unsigned long op);
 
 TEE_Result utee_gprof_send(void *buf, size_t size, uint32_t *id);
+
+//rex_do 2018-12-14
+void utee_tee_log(const void *buf, size_t len);
 
 #endif /* UTEE_SYSCALLS_H */

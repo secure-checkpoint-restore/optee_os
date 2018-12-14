@@ -44,6 +44,7 @@
 #include <kernel/pseudo_ta.h>
 #include <mm/mobj.h>
 
+#include <kernel/proc.h>
 
 vaddr_t tee_svc_uref_base;
 
@@ -1112,9 +1113,24 @@ TEE_Result syscall_set_ta_time(const TEE_Time *mytime)
 
 	return tee_time_set_ta_time((const void *)&s->ctx->uuid, &t);
 }
-//rex_do 2018-12-2
 
-void syscall_boot(void)
+//rex_do 2018-12-14
+int syscall_tee_log(struct proc *proc)
 {
-	DMSG("syscall boot");
+	const void *buf = (void*)proc->uregs->x[0];
+	size_t len = proc->uregs->x[1];
+	char *kbuf;
+
+	if (len == 0)
+		return 0;
+
+	kbuf = malloc(len + 1);
+	if (kbuf == NULL)
+		return -1;
+
+	memcpy(kbuf, buf, len);
+	kbuf[len] = '\0';
+	trace_ext_puts(kbuf);
+	free(kbuf);
+	return 0;
 }

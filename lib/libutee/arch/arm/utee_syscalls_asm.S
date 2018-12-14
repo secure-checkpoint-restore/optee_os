@@ -188,5 +188,5 @@
 
         UTEE_SYSCALL utee_cache_operation, TEE_SCN_CACHE_OPERATION, 3
 
-	//rex_do 2018-12-1
-	UTEE_SYSCALL utee_boot, TEE_SCN_BOOT, 0	
+	//rex_do 2018-12-14
+	UTEE_SYSCALL utee_tee_log, TEE_SCN_TEE_LOG, 2

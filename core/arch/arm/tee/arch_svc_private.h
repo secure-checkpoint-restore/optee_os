@@ -35,4 +35,6 @@ typedef TEE_Result (*syscall_t)(void);
 /* Helper function for tee_svc_handler() */
 uint32_t tee_svc_do_call(struct thread_svc_regs *regs, syscall_t func);
 
+//rex_do 2018-12-13
+uint32_t tee_proc_svc_do_call(struct proc *proc, syscall_t func);
 #endif /*ARCH_SVC_PRIVATE_H*/

@@ -42,6 +42,8 @@
 
 #include "arch_svc_private.h"
 
+#include <kernel/proc.h>
+
 #if (TRACE_LEVEL == TRACE_FLOW) && defined(CFG_TEE_CORE_TA_TRACE)
 #define TRACE_SYSCALLS
 #endif
@@ -134,8 +136,8 @@ static const struct syscall_entry tee_svc_syscall_table[] = {
 	SYSCALL_ENTRY(syscall_se_channel_transmit),
 	SYSCALL_ENTRY(syscall_se_channel_close),
 	SYSCALL_ENTRY(syscall_cache_operation),
-	//rex_do 2018-12-1
-	SYSCALL_ENTRY(syscall_boot),
+	//rex_do 2018-12-14
+	SYSCALL_ENTRY(syscall_tee_log),
 };
 
 #ifdef TRACE_SYSCALLS
@@ -273,3 +275,29 @@ uint32_t tee_svc_sys_return_helper(uint32_t ret, bool panic,
 	return ret;
 }
 #endif /*ARM64*/
+
+//rex_do 2018-12-13
+void tee_proc_svc_handler(struct proc *proc)
+{
+
+	size_t scn;
+	syscall_t scf;
+	COMPILE_TIME_ASSERT(ARRAY_SIZE(tee_svc_syscall_table) ==
+				(TEE_SCN_MAX + 1));
+
+
+	scn = proc->uregs->x[8];
+	DMSG("tee svc test\n");	
+	if (scn > TEE_SCN_MAX)
+	{
+		scf = syscall_not_supported;
+	}
+	else
+	{
+		DMSG("right point\n");
+		scf = tee_svc_syscall_table[scn].fn;
+	}	
+	proc->uregs->x[0] = tee_proc_svc_do_call(proc, scf);
+	DMSG("svc finish\n");
+	
+}

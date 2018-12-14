@@ -263,6 +263,12 @@ void __thread_std_smc_entry(struct thread_smc_args *args);
 int call_resume(struct pcb_regs *regs, uint32_t spsr);
 
 void proc_load_entry(void);
+
+struct cpu_local* get_tee_cpu(void);
+
+void proc_resume(struct pcb_regs *regs);
+
+void proc_init_vbar(void);
 #endif /*ASM*/
 
 #endif /*THREAD_PRIVATE_H*/

@@ -33,6 +33,7 @@
 #include <tee_api_types.h>
 #include <utee_types.h>
 
+#include <kernel/proc.h>
 extern vaddr_t tee_svc_uref_base;
 
 struct tee_ta_session;
@@ -119,6 +120,6 @@ TEE_Result syscall_wait(unsigned long timeout);
 TEE_Result syscall_get_time(unsigned long cat, TEE_Time *time);
 TEE_Result syscall_set_ta_time(const TEE_Time *time);
 
-//rex_do
-void syscall_boot(void);
+//rex_do 2018-12-14
+int syscall_tee_log(struct proc *proc);
 #endif /* TEE_SVC_H */

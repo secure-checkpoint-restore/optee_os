@@ -38,6 +38,15 @@ struct proc {
     uint64_t map;
 } __aligned(16);
 
-void proc_clr_boot(void);
+void proc_clr_init(void);
 
+void proc_schedule(void);
+
+struct proc *get_cur_proc(void);
+
+int enqueue(struct proc *p);
+
+void rex_debug(uint64_t address);
+
+void run(void);
 #endif

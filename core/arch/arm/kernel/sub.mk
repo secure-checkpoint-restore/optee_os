@@ -54,3 +54,4 @@ srcs-y += link_dummies.c
 
 #rex_do 2018-12-8
 srcs-y += proc.c
+srcs-$(CFG_ARM64_core) += tee_proc_a64.S

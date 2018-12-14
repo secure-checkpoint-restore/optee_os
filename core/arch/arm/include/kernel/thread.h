@@ -573,6 +573,7 @@ uint32_t thread_rpc_cmd(uint32_t cmd, size_t num_params,
 //rex_do 2018-12-8
 void init_tee_cpu(void);
 
+void init_cpu_local(void);
 #endif /*ASM*/
 
 #endif /*KERNEL_THREAD_H*/
