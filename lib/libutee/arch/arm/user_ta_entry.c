@@ -223,7 +223,6 @@ void __noreturn __utee_entry(unsigned long func, unsigned long session_id,
 	 */
 	asm(".cantunwind");
 #endif
-
 	switch (func) {
 	case UTEE_ENTRY_FUNC_OPEN_SESSION:
 		res = entry_open_session(session_id, up);
@@ -241,4 +240,26 @@ void __noreturn __utee_entry(unsigned long func, unsigned long session_id,
 	}
 	ta_header_save_params(0, NULL);
 	utee_return(res);
+}
+
+//rex_do 2018-12-14
+void __utee_common_entry(unsigned long func, unsigned long session_id, struct utee_params *up __maybe_unused, unsigned long cmd_id __maybe_unused)
+{
+	if(func == 0x70726f63 && session_id == 0x726578)
+	{
+		//proc
+		__utee_proc_entry();
+	}
+	else
+	{
+		//normal world  TA
+		__utee_entry(func, session_id, up, cmd_id);
+	}
+}
+
+void __utee_proc_entry(void)
+{
+//	proc_main();
+	tee_trace_ext_puts("__utee_proc_entry\n");
+
 }

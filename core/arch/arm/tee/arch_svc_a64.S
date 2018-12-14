@@ -203,3 +203,13 @@ FUNC syscall_panic , :
 	ldr	x3, [x19, #SC_REC_X0]
 	b	tee_svc_sys_return_helper
 END_FUNC syscall_panic
+
+//rex_do 2018-12-13
+FUNC tee_proc_svc_do_call , :
+	sub sp, sp, #16
+	str x30, [sp, #0]
+	blr x1
+	ldr x30, [sp, #0]
+	add sp, sp, #16
+	ret
+END_FUNC tee_proc_svc_do_call

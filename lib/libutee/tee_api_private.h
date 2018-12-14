@@ -52,5 +52,12 @@ static inline void __utee_gprof_init(void) {}
 static inline void __utee_gprof_fini(void) {}
 #endif
 
+
+//rex_do 2018-12-14
+void __utee_common_entry(unsigned long func, unsigned long session_id,
+                        struct utee_params *up __maybe_unused, unsigned long cmd_id __maybe_unused);
+
+void __utee_proc_entry(void);
+
 #endif /*TEE_API_PRIVATE*/
 

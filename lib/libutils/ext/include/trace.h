@@ -200,4 +200,6 @@ void dhex_dump(const char *function, int line, int level,
 #undef _PRINT_STACK
 #endif
 
+//rex_do 2018-12-14
+void tee_trace_ext_puts(const char *str);
 #endif /* TRACE_H */

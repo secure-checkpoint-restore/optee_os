@@ -96,6 +96,12 @@ int puts(const char *str)
 	return 1;
 }
 
+//rex_do 2018-12-14
+void tee_trace_ext_puts(const char *str)
+{
+        utee_tee_log(str, strlen(str));
+}
+
 #else
 
 int printf(const char *fmt __unused, ...)

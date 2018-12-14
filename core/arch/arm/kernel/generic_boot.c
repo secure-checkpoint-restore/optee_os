@@ -66,6 +66,7 @@
 #include <libfdt.h>
 #endif
 
+#include "thread_private.h"
 /*
  * In this file we're using unsigned long to represent physical pointers as
  * they are received in a single register when OP-TEE is initially entered.
@@ -768,13 +769,18 @@ paddr_t generic_boot_core_hpen(void)
 #endif
 
 //rex_do 2018-12-3
-static void mask_ns_irq(void)
+
+static void init_cpu_vbar(void)
 {
         uint32_t daif = read_daif();
+	thread_set_exceptions(THREAD_EXCP_ALL);
+	init_cpu_local();
+	proc_init_vbar();
+	//mask irq 
         daif |= DAIF_I;
         write_daif(daif);
-        daif = read_daif();
 }
+
 /*
 static void enable_secure_timer(void)
 {
@@ -791,23 +797,40 @@ static void enable_secure_timer(void)
 }
 */
 
-static void idle(void)
+/*
+static void cpu_idle(void)
 {
 	while(1)
 	{
 		asm volatile("wfi");
 	}	
 }
+*/
+
+static void show_current_el(void)
+{
+	uint32_t val;
+
+	asm volatile ("mrs %0, CurrentEL" : "=r" (val));
+	DMSG("current exception level: EL%u\n", (val & 0xf) >> 2);
+}
 
 //TODO
 void final_boot(void)
 {
-    DMSG("\n------------------------------------------------\n");
+    DMSG("------------------------------------------------\n");
     DMSG("CPU %x switching to secure world final boot\n", (uint32_t)get_core_pos());
-    mask_ns_irq(); 
+    show_current_el();
+    init_tee_cpu();
+    init_cpu_vbar(); 
     //TODO
     //enable_secure_timer();
 
-    proc_clr_boot();
-    idle();
+    proc_clr_init();
+   
+    run();
+	 
+    //should not run here
+
+    panic("os should not run here");
 }

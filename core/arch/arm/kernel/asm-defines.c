@@ -105,8 +105,27 @@ DEFINES
 	DEFINE(THREAD_CORE_LOCAL_X2, offsetof(struct thread_core_local, x[2]));
 
 	//rex_do 2018-12-9
+	/* struct pcb_regs */
 	DEFINE(PCB_REGS_SP, offsetof(struct proc, regs.sp));
 	DEFINE(PCB_REGS_X0, offsetof(struct proc, regs.x[0]));
 	DEFINE(PCB_REGS_X1, offsetof(struct proc, regs.x[1]));
+
+	/* struct pcb_regs */
+	DEFINE(UREGS_SP, offsetof(struct pcb_regs, sp));
+	DEFINE(UREGS_PC, offsetof(struct pcb_regs, pc));
+	DEFINE(UREGS_SPSR, offsetof(struct pcb_regs, spsr));
+	DEFINE(UREGS_X0, offsetof(struct pcb_regs, x[0]));
+	DEFINE(UREGS_X1, offsetof(struct pcb_regs, x[1]));
+	DEFINE(UREGS_X3, offsetof(struct pcb_regs, x[3]));
+	DEFINE(UREGS_X4, offsetof(struct pcb_regs, x[4]));
+	DEFINE(UREGS_X30, offsetof(struct pcb_regs, x[30]));
+	
+	/* struct proc */
+	DEFINE(PROC_UREGS, offsetof(struct proc, uregs));
+	DEFINE(PROC_SIZE, sizeof(struct proc));
+	
+	/* struct cpu_local */
+	DEFINE(CPU_LOCAL_X0, offsetof(struct cpu_local, x[0]));
+	DEFINE(CPU_LOCAL_CUR_PROC, offsetof(struct cpu_local, cur_proc));
 #endif /*ARM64*/
 }

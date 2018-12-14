@@ -758,6 +758,11 @@ TEE_Result tee_ta_load(struct shdr *signed_ta, struct proc *proc)
 	ta_head = (struct ta_head*)sn_tee_mmu_get_load_addr(run);
 	run->entry = ta_head->entry.ptr64;
 	
+	//sign "proc"	
+	proc->uregs->x[0] = 0x70726f63;
+	//sign "rex"
+	proc->uregs->x[1] = 0x726578;	
+	
 	proc->uregs->x[29] = 0;
 	proc->uregs->sp = usr_stack;
 	proc->uregs->pc = run->entry;

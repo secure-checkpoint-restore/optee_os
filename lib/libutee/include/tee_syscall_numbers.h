@@ -99,8 +99,8 @@
 #define TEE_SCN_SE_CHANNEL_TRANSMIT		68
 #define TEE_SCN_SE_CHANNEL_CLOSE		69
 #define TEE_SCN_CACHE_OPERATION			70
-//rex_do 2018-12-1
-#define TEE_SCN_BOOT 				71
+//rex_do 2018-12-14
+#define TEE_SCN_TEE_LOG 			71
 
 //rex_do 2018-12-1
 #define TEE_SCN_MAX				71

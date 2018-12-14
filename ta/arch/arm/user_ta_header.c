@@ -54,6 +54,11 @@ void __utee_entry(unsigned long func, unsigned long session_id,
 			struct utee_params *up, unsigned long cmd_id)
 			__noreturn;
 
+//rex_do 2018-12-14
+void __utee_common_entry(unsigned long func, unsigned long session_id,
+                        struct utee_params *up __maybe_unused, unsigned long cmd_id __maybe_unused);
+
+
 /*
  * According to GP Internal API, TA_STACK_SIZE corresponds to the stack
  * size used by the TA code itself and does not include stack space
@@ -83,7 +88,9 @@ const struct ta_head ta_head __section(".ta_head") = {
 	 */
 	.entry.ptr32 = { .lo = (uint32_t)__utee_entry },
 #else
-	.entry.ptr64 = (uint64_t)__utee_entry,
+	//rex_do 2018-12-14
+	//.entry.ptr64 = (uint64_t)__utee_entry,
+	.entry.ptr64 = (uint64_t)__utee_common_entry,
 #endif
 };
 
