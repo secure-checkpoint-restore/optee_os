@@ -46,6 +46,17 @@ LOCAL_FUNC proc_vect_table , :
 	.align	7
 sync_el1_sp0:
 	store_xregs sp, CPU_LOCAL_X0, 0, 3
+	bl      rex_debug
+	mov     x0, #1
+        bl      rex_debug
+	mrs 	x0, elr_el1
+	bl	rex_debug
+	mrs 	x0, sp_el0
+	bl	rex_debug
+	mrs	x0, esr_el1
+	bl 	rex_debug
+	mrs	x0, far_el1
+	bl	rex_debug
 	b	el1_sync_abort
 	check_vector_size sync_el1_sp0
 
@@ -98,11 +109,22 @@ el0_sync_a64:
 	store_xregs sp, CPU_LOCAL_X0, 0, 3
 
 	mrs	x2, esr_el1
-	mrs	x3, sp_el0
 	lsr	x2, x2, #ESR_EC_SHIFT
 	cmp	x2, #ESR_EC_AARCH64_SVC
 
 	b.eq	el0_svc
+	mov x0, x29
+	bl rex_debug
+	mov x0, #0
+	bl rex_debug
+	mrs     x0, elr_el1
+        bl      rex_debug
+        mrs     x0, sp_el0
+        bl      rex_debug
+        mrs     x0, esr_el1
+        bl      rex_debug
+        mrs     x0, far_el1
+        bl      rex_debug
 	b	el0_sync_abort
 	check_vector_size el0_sync_a64
 
@@ -158,19 +180,20 @@ END_FUNC proc_vect_table
 LOCAL_FUNC el0_svc , :
 	/* get pointer to current thread context in x0 */
 	get_proc sp, 0, 1, 2
-	ldr	x3, [x0, #PROC_UREGS]
 	
 	mrs x1, sp_el0
 	mrs x2, elr_el1
-	stp x1, x2, [x3, #UREGS_SP]
+	stp x1, x2, [x0, #USER_REGS_SP]
 	mrs x1, spsr_el1
-	str x1, [x3, #UREGS_SPSR]
-	store_xregs x3, UREGS_X4, 4, 30
-	load_xregs sp, CPU_LOCAL_X0, 4, 7 
-	store_xregs x3, UREGS_X0, 4, 7
+	str x1, [x0, #USER_REGS_SPSR]
+	store_xregs x0, USER_REGS_X4, 4, 30
+	load_xregs sp, CPU_LOCAL_X0, 4, 7
+	store_xregs x0, USER_REGS_X0, 4, 7
 	
 	msr spsel, #0
-	mov sp, x3
+	
+	ldr	x3, [x0, #PROC_KSTACK]
+	mov 	sp, x3
 	
 	#if defined(CFG_ARM_GICV3)
 		msr	daifclr, #(DAIFBIT_ABT | DAIFBIT_DBG)
@@ -180,7 +203,6 @@ LOCAL_FUNC el0_svc , :
 
 	/* Call the handler */
 	bl	tee_proc_svc_handler
-
 	/* Mask all maskable exceptions since we're switching back to sp_el1 */
 	msr	daifset, #DAIFBIT_ALL
 
@@ -188,17 +210,15 @@ LOCAL_FUNC el0_svc , :
 	get_proc sp, 0, 1, 2
 	msr	spsel, #0
 
-	ldr	x3, [x0, #PROC_UREGS]
 	/* Restore registers to the required state and return*/
-	ldr	x1, [x3, #UREGS_PC]
+	ldr	x1, [x0, #USER_REGS_PC]
 	msr	elr_el1, x1
-	ldr	x1, [x3, #UREGS_SPSR]
+	ldr	x1, [x0, #USER_REGS_SPSR]
 	msr	spsr_el1, x1
-	ldr	x1, [x3, #UREGS_SP]
+	ldr	x1, [x0, #USER_REGS_SP]
 	mov	sp, x1
-	load_xregs x3, UREGS_X0, 0, 2
-	load_xregs x3, UREGS_X4, 4, 30
-	ldr	x3, [x3, #UREGS_X3]
+	load_xregs x0, USER_REGS_X1, 1, 30
+	ldr	x0, [x0, #USER_REGS_X0]
 	eret
 
 END_FUNC el0_svc
@@ -358,123 +378,62 @@ LOCAL_FUNC el0_sync_abort , :
 	eret
 END_FUNC el0_sync_abort
 
-/* The handler of foreign interrupt. */
-.macro foreign_intr_handler mode:req
-	/*
-	 * Update core local flags
-	 */
-	ldr	w1, [sp, #THREAD_CORE_LOCAL_FLAGS]
-	lsl	w1, w1, #THREAD_CLF_SAVED_SHIFT
-	orr	w1, w1, #THREAD_CLF_TMP
-	.ifc	\mode\(),fiq
-	orr	w1, w1, #THREAD_CLF_FIQ
-	.else
-	orr	w1, w1, #THREAD_CLF_IRQ
-	.endif
-	str	w1, [sp, #THREAD_CORE_LOCAL_FLAGS]
 
-	/* get pointer to current thread context in x0 */
-	get_proc sp, 0, 1, 2
-	/* Keep original SP_EL0 */
-	mrs	x2, sp_el0
+#define ELX_FIQ_REC_X(x)              (8 * ((x) - 4))
+#define ELX_FIQ_REC_LR                (8 + ELX_FIQ_REC_X(19))
+#define ELX_FIQ_REC_SP_EL0            (8 + ELX_FIQ_REC_LR)
+#define ELX_FIQ_REC_SIZE              (8 + ELX_FIQ_REC_SP_EL0)
 
-	/* Store original sp_el0 */
-	str	x2, [x0, #THREAD_CTX_REGS_SP]
-	/* store x4..x30 */
-	store_xregs x0, THREAD_CTX_REGS_X4, 4, 30
-	/* Load original x0..x3 into x10..x13 */
-	load_xregs sp, THREAD_CORE_LOCAL_X0, 10, 13
-	/* Save original x0..x3 */
-	store_xregs x0, THREAD_CTX_REGS_X0, 10, 13
-
-	/* load tmp_stack_va_end */
-	ldr	x1, [sp, #THREAD_CORE_LOCAL_TMP_STACK_VA_END]
+LOCAL_FUNC elx_fiq , :
+	ldr x0, [sp, #CPU_LOCAL_CUR_PROC]
+	and x0, x0, #0xf0
+	cmp x0, #0
+	bne .no_proc
+	get_proc sp, 0, 1, 2	
+	ldr 	x0, [x0, #PROC_INTR_REGS]
+        mrs 	x1, sp_el0
+        mrs 	x2, elr_el1
+        stp 	x1, x2, [x0, #PCB_REGS_SP]
+        mrs 	x1, spsr_el1
+        str 	x1, [x0, #PCB_REGS_SPSR]
+        store_xregs x0, PCB_REGS_X4, 4, 30
+        load_xregs sp, CPU_LOCAL_X0, 4, 7
+        store_xregs x0, PCB_REGS_X0, 4, 7
+	
+	ldr	x1, [sp, #CPU_LOCAL_TMP_STACK]
 	/* Switch to SP_EL0 */
 	msr	spsel, #0
 	mov	sp, x1
 
-	/*
-	 * Mark current thread as suspended
-	 */
-	mov	w0, #THREAD_FLAGS_EXIT_ON_FOREIGN_INTR
-	mrs	x1, spsr_el1
-	mrs	x2, elr_el1
-	bl	thread_state_suspend
-	mov	w4, w0		/* Supply thread index */
+	bl      thread_check_canaries
+	bl	proc_check_canaries
+	adr	x16, thread_nintr_handler_ptr
+	ldr	x16, [x16]
+	blr	x16
+	
+	b 	.
 
-	/* Update core local flags */
-	/* Switch to SP_EL1 */
-	msr	spsel, #1
-	ldr	w0, [sp, #THREAD_CORE_LOCAL_FLAGS]
-	lsr	w0, w0, #THREAD_CLF_SAVED_SHIFT
-	str	w0, [sp, #THREAD_CORE_LOCAL_FLAGS]
-	msr	spsel, #0
-
-	/*
-	 * Note that we're exiting with SP_EL0 selected since the entry
-	 * functions expects to have SP_EL0 selected with the tmp stack
-	 * set.
-	 */
-
-	ldr	w0, =TEESMC_OPTEED_RETURN_CALL_DONE
-	ldr	w1, =OPTEE_SMC_RETURN_RPC_FOREIGN_INTR
-	mov	w2, #0
-	mov	w3, #0
-	/* w4 is already filled in above */
-	smc	#0
-	b	.	/* SMC should not return */
-.endm
-
-/*
- * This struct is never used from C it's only here to visualize the
- * layout.
- *
- * struct elx_nintr_rec {
- * 	uint64_t x[19 - 4]; x4..x18
- * 	uint64_t lr;
- * 	uint64_t sp_el0;
- * };
- */
-#define ELX_NINTR_REC_X(x)		(8 * ((x) - 4))
-#define ELX_NINTR_REC_LR		(8 + ELX_NINTR_REC_X(19))
-#define ELX_NINTR_REC_SP_EL0		(8 + ELX_NINTR_REC_LR)
-#define ELX_NINTR_REC_SIZE		(8 + ELX_NINTR_REC_SP_EL0)
-
-/* The handler of native interrupt. */
-.macro native_intr_handler mode:req
-	/*
-	 * Update core local flags
-	 */
-	ldr	w1, [sp, #THREAD_CORE_LOCAL_FLAGS]
-	lsl	w1, w1, #THREAD_CLF_SAVED_SHIFT
-	.ifc	\mode\(),fiq
-	orr	w1, w1, #THREAD_CLF_FIQ
-	.else
-	orr	w1, w1, #THREAD_CLF_IRQ
-	.endif
-	orr	w1, w1, #THREAD_CLF_TMP
-	str	w1, [sp, #THREAD_CORE_LOCAL_FLAGS]
-
-	/* load tmp_stack_va_end */
-	ldr	x1, [sp, #THREAD_CORE_LOCAL_TMP_STACK_VA_END]
+.no_proc:
+	ldr	x1, [sp, #CPU_LOCAL_TMP_STACK]
 	/* Keep original SP_EL0 */
 	mrs	x2, sp_el0
 	/* Switch to SP_EL0 */
 	msr	spsel, #0
-	mov	sp, x1
-
+	mov	sp, x1	
+	
 	/*
 	 * Save registers on stack that can be corrupted by a call to
 	 * a C function
 	 */
-	/* Make room for struct elx_nintr_rec */
-	sub	sp, sp, #ELX_NINTR_REC_SIZE
+	/* Make room for struct elx_fiq_rec */
+	sub	sp, sp, #ELX_FIQ_REC_SIZE
 	/* Store x4..x18 */
-	store_xregs sp, ELX_NINTR_REC_X(4), 4, 18
+	store_xregs sp, ELX_FIQ_REC_X(4), 4, 18
 	/* Store lr and original sp_el0 */
-	stp	x30, x2, [sp, #ELX_NINTR_REC_LR]
+	stp	x30, x2, [sp, #ELX_FIQ_REC_LR]
 
-	bl	thread_check_canaries
+	bl      thread_check_canaries
+	bl	proc_check_canaries
 	adr	x16, thread_nintr_handler_ptr
 	ldr	x16, [x16]
 	blr	x16
@@ -483,32 +442,19 @@ END_FUNC el0_sync_abort
 	 * Restore registers
 	 */
 	/* Restore x4..x18 */
-	load_xregs sp, ELX_NINTR_REC_X(4), 4, 18
+	load_xregs sp, ELX_FIQ_REC_X(4), 4, 18
 	/* Load  lr and original sp_el0 */
-	ldp	x30, x2, [sp, #ELX_NINTR_REC_LR]
+	ldp	x30, x2, [sp, #ELX_FIQ_REC_LR]
 	/* Restore SP_El0 */
 	mov	sp, x2
 	/* Switch back to SP_EL1 */
 	msr	spsel, #1
 
-	/* Update core local flags */
-	ldr	w0, [sp, #THREAD_CORE_LOCAL_FLAGS]
-	lsr	w0, w0, #THREAD_CLF_SAVED_SHIFT
-	str	w0, [sp, #THREAD_CORE_LOCAL_FLAGS]
-
 	/* Restore x0..x3 */
-	load_xregs sp, THREAD_CORE_LOCAL_X0, 0, 3
+	load_xregs sp, CPU_LOCAL_X0, 0, 3
 
 	/* Return from exception */
 	eret
-.endm
-
-LOCAL_FUNC elx_fiq , :
-#if defined(CFG_ARM_GICV3)
-	foreign_intr_handler	fiq
-#else
-	native_intr_handler	fiq
-#endif
 END_FUNC elx_fiq
 
 FUNC init_cpu_local , :
@@ -522,3 +468,45 @@ FUNC init_cpu_local , :
         add     sp, sp, #16
         ret
 END_FUNC init_cpu_local
+
+	.macro get_thread_ctx core_local, res, tmp0, tmp1
+                ldr     w\tmp0, [\core_local, \
+                                #THREAD_CORE_LOCAL_CURR_THREAD]
+                adr     x\res, threads
+                mov     x\tmp1, #THREAD_CTX_SIZE
+                madd    x\res, x\tmp0, x\tmp1, x\res
+        .endm
+
+
+FUNC save_migrate_context , :
+	msr     spsel, #1
+	get_thread_ctx sp, 1, 2, 3
+	ldr	x2, [x1, #THREAD_CTX_KERN_SP]
+	sub     x2, x2, #THREAD_SVC_REG_SIZE
+
+        ldp     x3, x4, [x2, #THREAD_SVC_REG_X30]
+	str     x3, [x0, #USER_REGS_X30]
+	str	x4, [x0, #USER_REGS_SP]
+
+	load_xregs x2, THREAD_SVC_REG_ELR, 3, 4
+	stp     x3, x4, [x0, #USER_REGS_PC]
+
+	mov	x19, x0
+	mov	x20, x2
+	load_xregs x20, THREAD_SVC_REG_X0, 0, 14
+	store_xregs x19, USER_REGS_X0, 0, 29
+
+	msr 	spsel, #0
+	ret	
+END_FUNC save_migrate_context
+
+FUNC switch_migrate_stack , :
+	
+	msr	spsel, #1	
+	/* Select tmp stack */
+	ldr	x1, [sp, #THREAD_CORE_LOCAL_TMP_STACK_VA_END]
+	msr	sp_el0, x1
+	msr     spsel, #0
+	ret
+	
+END_FUNC switch_migrate_stack

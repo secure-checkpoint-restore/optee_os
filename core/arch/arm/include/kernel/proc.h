@@ -13,6 +13,11 @@
 #define NUM_PROCS 	16
 #define NUM_PRIO 	8
 
+#define P_INTR		1 << 0
+
+extern bool found_mp;
+extern uint32_t migrate_pid;
+
 struct cpu_local {
 	vaddr_t tmp_stack;
 	int cur_proc;
@@ -27,8 +32,8 @@ struct pcb_regs {
 };
 
 struct proc {
-    struct pcb_regs regs;
-    struct pcb_regs *uregs;
+    struct pcb_regs user_regs;
+    struct pcb_regs *intr_regs;
     uint64_t k_stack;
     struct pgt_cache pgt_cache;
     struct list_head link;
@@ -36,6 +41,8 @@ struct proc {
     int endpoint;
     struct run_info run_info;
     uint64_t map;
+    uint32_t flags;
+    uint64_t rt_quota;
 } __aligned(16);
 
 void proc_clr_init(void);
@@ -46,7 +53,15 @@ struct proc *get_cur_proc(void);
 
 int enqueue(struct proc *p);
 
+int enqueue_head(struct proc* p);
+
 void rex_debug(uint64_t address);
 
 void run(void);
+
+void save_migrate_context(struct proc *proc);
+
+void switch_migrate_stack(void);
+
+struct proc *alloc_migrate_proc(void);
 #endif

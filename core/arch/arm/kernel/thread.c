@@ -98,6 +98,8 @@ static struct thread_core_local thread_core_local[CFG_TEE_CORE_NB_CORE];
 //static problem
 struct cpu_local tee_cpu;
 
+static uint32_t tee_cpu_id;
+
 #ifdef CFG_WITH_STACK_CANARIES
 #ifdef ARM32
 #define STACK_CANARY_SIZE	(4 * sizeof(uint32_t))
@@ -1414,9 +1416,22 @@ void init_tee_cpu(void)
 {
 	tee_cpu.cur_proc = -1;
 	tee_cpu.tmp_stack = GET_STACK(stack_tmp[get_core_pos()]);
+	tee_cpu_id = (uint32_t)get_core_pos();
+}
+
+uint32_t get_tee_core_pos(void)
+{
+	return tee_cpu_id;
 }
 
 struct cpu_local *get_tee_cpu(void)
 {
 	return &tee_cpu;
+}
+
+void set_proc_map(struct proc *p)
+{
+	struct core_mmu_user_map tmp_map;
+	core_mmu_get_user_map(&tmp_map);
+	p->map = tmp_map.user_map;
 }

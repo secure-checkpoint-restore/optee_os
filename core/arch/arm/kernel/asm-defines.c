@@ -105,27 +105,33 @@ DEFINES
 	DEFINE(THREAD_CORE_LOCAL_X2, offsetof(struct thread_core_local, x[2]));
 
 	//rex_do 2018-12-9
-	/* struct pcb_regs */
-	DEFINE(PCB_REGS_SP, offsetof(struct proc, regs.sp));
-	DEFINE(PCB_REGS_X0, offsetof(struct proc, regs.x[0]));
-	DEFINE(PCB_REGS_X1, offsetof(struct proc, regs.x[1]));
-
-	/* struct pcb_regs */
-	DEFINE(UREGS_SP, offsetof(struct pcb_regs, sp));
-	DEFINE(UREGS_PC, offsetof(struct pcb_regs, pc));
-	DEFINE(UREGS_SPSR, offsetof(struct pcb_regs, spsr));
-	DEFINE(UREGS_X0, offsetof(struct pcb_regs, x[0]));
-	DEFINE(UREGS_X1, offsetof(struct pcb_regs, x[1]));
-	DEFINE(UREGS_X3, offsetof(struct pcb_regs, x[3]));
-	DEFINE(UREGS_X4, offsetof(struct pcb_regs, x[4]));
-	DEFINE(UREGS_X30, offsetof(struct pcb_regs, x[30]));
+	/* struct pcb_regs user_regs*/
+	DEFINE(USER_REGS_SP, offsetof(struct proc, user_regs.sp));
+	DEFINE(USER_REGS_SPSR, offsetof(struct proc, user_regs.spsr));
+	DEFINE(USER_REGS_PC, offsetof(struct proc, user_regs.pc));
+	DEFINE(USER_REGS_X0, offsetof(struct proc, user_regs.x[0]));
+	DEFINE(USER_REGS_X1, offsetof(struct proc, user_regs.x[1]));
+	DEFINE(USER_REGS_X4, offsetof(struct proc, user_regs.x[4]));
+	DEFINE(USER_REGS_X30, offsetof(struct proc, user_regs.x[30]));
+	
+	/* struct pcb_regs intr_regs*/
+	DEFINE(PCB_REGS_SP, offsetof(struct pcb_regs, sp));
+	DEFINE(PCB_REGS_PC, offsetof(struct pcb_regs, pc));
+	DEFINE(PCB_REGS_SPSR, offsetof(struct pcb_regs, spsr));
+	DEFINE(PCB_REGS_X0, offsetof(struct pcb_regs, x[0]));
+	DEFINE(PCB_REGS_X1, offsetof(struct pcb_regs, x[1]));
+	DEFINE(PCB_REGS_X3, offsetof(struct pcb_regs, x[3]));
+	DEFINE(PCB_REGS_X4, offsetof(struct pcb_regs, x[4]));
+	DEFINE(PCB_REGS_X30, offsetof(struct pcb_regs, x[30]));
 	
 	/* struct proc */
-	DEFINE(PROC_UREGS, offsetof(struct proc, uregs));
+	DEFINE(PROC_INTR_REGS, offsetof(struct proc, intr_regs));
 	DEFINE(PROC_SIZE, sizeof(struct proc));
+	DEFINE(PROC_KSTACK, offsetof(struct proc, k_stack));
 	
 	/* struct cpu_local */
 	DEFINE(CPU_LOCAL_X0, offsetof(struct cpu_local, x[0]));
 	DEFINE(CPU_LOCAL_CUR_PROC, offsetof(struct cpu_local, cur_proc));
+	DEFINE(CPU_LOCAL_TMP_STACK, offsetof(struct cpu_local, tmp_stack));
 #endif /*ARM64*/
 }

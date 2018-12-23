@@ -751,7 +751,7 @@ TEE_Result tee_ta_load(struct shdr *signed_ta, struct proc *proc)
 		return res;
 	sn_tee_mmu_set_ctx(proc);
     
-    	proc->uregs->spsr = read_daif() & (SPSR_64_DAIF_MASK << SPSR_64_DAIF_SHIFT);
+    	proc->user_regs.spsr = read_daif() & (SPSR_64_DAIF_MASK << SPSR_64_DAIF_SHIFT);
 	
 	usr_stack = (uaddr_t)(run->mmu->regions[0].va) + run->mobj_stack->size;
 
@@ -759,13 +759,13 @@ TEE_Result tee_ta_load(struct shdr *signed_ta, struct proc *proc)
 	run->entry = ta_head->entry.ptr64;
 	
 	//sign "proc"	
-	proc->uregs->x[0] = 0x70726f63;
+	proc->user_regs.x[0] = 0x70726f63;
 	//sign "rex"
-	proc->uregs->x[1] = 0x726578;	
+	proc->user_regs.x[1] = 0x726578;	
 	
-	proc->uregs->x[29] = 0;
-	proc->uregs->sp = usr_stack;
-	proc->uregs->pc = run->entry;
+	proc->user_regs.x[29] = 0;
+	proc->user_regs.sp = usr_stack;
+	proc->user_regs.pc = run->entry;
 	/* CPACR_EL1, Architectural Feature Access Control Register */
 	vfp_enable();
 	DMSG("ta address: %lx\n", (uint64_t)signed_ta);

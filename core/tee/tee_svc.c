@@ -45,6 +45,9 @@
 #include <mm/mobj.h>
 
 #include <kernel/proc.h>
+#include <kernel/ipi.h>
+#include <kernel/misc.h>
+#include <kernel/generic_boot.h>
 
 vaddr_t tee_svc_uref_base;
 
@@ -1117,8 +1120,8 @@ TEE_Result syscall_set_ta_time(const TEE_Time *mytime)
 //rex_do 2018-12-14
 int syscall_tee_log(struct proc *proc)
 {
-	const void *buf = (void*)proc->uregs->x[0];
-	size_t len = proc->uregs->x[1];
+	const void *buf = (void*)proc->user_regs.x[0];
+	size_t len = proc->user_regs.x[1];
 	char *kbuf;
 
 	if (len == 0)
@@ -1133,4 +1136,75 @@ int syscall_tee_log(struct proc *proc)
 	trace_ext_puts(kbuf);
 	free(kbuf);
 	return 0;
+}
+
+void __noreturn syscall_idle(void)
+{
+	DMSG("syscall_idle\n");
+	while(1)
+	{
+		asm("wfi");
+	}
+}
+
+void syscall_test(void)
+{
+	DMSG("test\n");
+}
+
+
+void syscall_migrate(uint32_t mode)
+{
+	uint32_t cpu_id = get_core_pos();
+	struct proc *m_proc;
+	if(!final_boot_finish)
+	{
+		return;
+	}
+	DMSG("migrate start by cpu: %u\n", cpu_id);
+	DMSG("mode: %u\n", mode);
+	switch(mode)
+	{
+		//migrate go
+		case 0:
+		{
+			DMSG("migrate go\n");
+			m_proc = alloc_migrate_proc();
+			if(m_proc == NULL && found_mp == false)
+			{
+				break;
+			}
+			set_proc_map(m_proc);
+			save_migrate_context(m_proc);
+			if(cpu_id != get_tee_core_pos() && cpu_id == get_core_pos())
+			{
+				switch_migrate_stack();
+				raise_ipi(IPI_MG, get_tee_core_pos());
+				while(1)
+				{
+					asm("wfi");
+				}
+			}
+			DMSG("migrate end by cpu: %u\n", (uint32_t)get_core_pos());
+			break;
+		}
+		//migrate back
+		default:
+		{
+			DMSG("migrate back\n");	
+			if(!found_mp)
+			{
+				DMSG("found_mp is false\n");
+
+				break;
+			}
+			DMSG("idle\n");
+			while(1)
+			{
+				asm("wfi");
+			}
+			break;
+		}
+	}
+	DMSG("should not run here\n");
 }

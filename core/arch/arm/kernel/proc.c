@@ -6,8 +6,9 @@
 #include <trace.h>
 #include <mm/core_mmu.h>
 #include <kernel/spinlock.h>
-
+#include <kernel/panic.h>
 #include "thread_private.h"
+#include <kernel/cache_helpers.h>
 
 #ifdef ARM32
 #define STACK_THREAD_SIZE	8192
@@ -47,7 +48,6 @@ linkage uint32_t name[num_stacks] \
 #define GET_STACK(stack) \
 	((vaddr_t)(stack) + STACK_SIZE(stack))
 
-
 DECLARE_STACK(stack_proc, NUM_PROCS, STACK_THREAD_SIZE, static);
 
 struct proc procs[NUM_PROCS];
@@ -55,6 +55,10 @@ struct proc procs[NUM_PROCS];
 struct list_head run_queues[NUM_PRIO];
 
 static unsigned int proc_global_lock = SPINLOCK_UNLOCK;
+
+uint32_t migrate_pid;
+bool found_mp;
+
 
 static void lock_global(void)
 {
@@ -89,13 +93,33 @@ static void init_canaries(void)
 #endif
 }
 
+#define CANARY_DIED(stack, loc, n) \
+	do { \
+		EMSG_RAW("Dead canary at %s of '%s[%zu]'", #loc, #stack, n); \
+		panic(); \
+	} while (0)
+
+void proc_check_canaries(void)
+{
+#ifdef CFG_WITH_STACK_CANARIES
+	size_t n;
+
+	for (n = 0; n < ARRAY_SIZE(stack_proc); n++) {
+                if (GET_START_CANARY(stack_proc, n) != START_CANARY_VALUE)
+                        CANARY_DIED(stack_proc, start, n);
+                if (GET_END_CANARY(stack_proc, n) != END_CANARY_VALUE)
+                        CANARY_DIED(stack_proc, end, n);
+        }
+
+#endif/*CFG_WITH_STACK_CANARIES*/
+}
 static void init_proc(void)
 {
 	int i;
 	for(i = 0; i < NUM_PROCS; i++) 
 	{
-		procs[i].k_stack = GET_STACK(stack_proc[i]);
-		procs[i].uregs = (void*)(procs[i].k_stack - sizeof(struct pcb_regs));
+		procs[i].k_stack = GET_STACK(stack_proc[i]) - sizeof(struct pcb_regs);
+		procs[i].intr_regs = (void*)procs[i].k_stack;
 		procs[i].endpoint = -1;
 		SLIST_INIT(&procs[i].pgt_cache);
 	}
@@ -135,30 +159,22 @@ static int proc_alloc(void *ta)
 	}
 
 	proc = &procs[i];
-	proc->regs.pc = (uint64_t)proc_load_entry;
+	proc->user_regs.pc = (uint64_t)proc_load_entry;
 
-	/*
-	 * Stdcalls starts in SVC mode with masked foreign interrupts, masked
-	 * Asynchronous abort and unmasked native interrupts.
-	 */
-	proc->regs.spsr = SPSR_64(SPSR_64_MODE_EL1, SPSR_64_MODE_SP_EL0,
+	proc->user_regs.spsr = SPSR_64(SPSR_64_MODE_EL1, SPSR_64_MODE_SP_EL0,
 				THREAD_EXCP_FOREIGN_INTR | DAIFBIT_ABT);
 
-	/* Reinitialize stack pointer */
-	proc->regs.sp = proc->k_stack;
+	proc->user_regs.sp = proc->k_stack;
 	proc->prio = 4;
-	/*
-	 * Copy arguments into context. This will make the
-	 * arguments appear in x0-x7 when thread is started.
-	 */
-	proc->regs.x[0] = (uint64_t)ta;
-	proc->regs.x[1] = (uint64_t)i;
-	/* Set up frame pointer as per the Aarch64 AAPCS */
-	proc->regs.x[29] = 0;
+	proc->flags = 0;	
+	proc->rt_quota = 1024;
+	proc->user_regs.x[0] = (uint64_t)ta;
+	proc->user_regs.x[1] = (uint64_t)i;
+	proc->user_regs.x[29] = 0;
 	
-	return call_resume(&procs[i].regs, spsr);
+	return call_resume(&procs[i].user_regs, spsr);
 }
- 
+
 void proc_clr_init(void)
 {
 	init_canaries();
@@ -172,6 +188,7 @@ void proc_schedule(void)
 	struct proc *proc = NULL;
 	struct list_head* lh;
 	int i;
+	cpu->cur_proc = -1;
 	for(i = 0; i < NUM_PRIO; i++) 
 	{
 		lh = &run_queues[i]; 
@@ -194,7 +211,17 @@ void proc_schedule(void)
 	cpu->cur_proc = proc->endpoint;
 	map.user_map = proc->map;
 	core_mmu_set_user_map(&map);
-	proc_resume(proc->uregs);
+	if(proc->flags & P_INTR)
+	{
+		proc->flags &= ~(uint32_t)(P_INTR);
+		proc_resume(proc->intr_regs);
+	}
+	else
+	{
+		proc_resume(&(proc->user_regs));
+
+	}
+
 }
 
 struct proc *get_cur_proc(void)
@@ -223,25 +250,64 @@ int enqueue(struct proc* p)
 	return 0;
 }
 
+int enqueue_head(struct proc* p) 
+{
+    struct list_head *lh;
+    struct list_head *lp;
+    lh = &run_queues[p->prio];
+    lp = &p->link;
+    lp->next = lh->next;
+    lp->next->prev = lp;
+    lp->prev = lh;
+    lh->next = lp;
+    return 0;
+}
 void run(void)
 {
+	
 	int res;
 	res = proc_alloc((void*)0x6100000ul);
         if(res != 0)
         {
                 DMSG("proc_alloc error!\n");
         }
-        /*      
+             
         res = proc_alloc((void*)0x61216c4ul);
         if(res != 0)
         {
                 DMSG("proc_alloc error!\n");
         }
-        */
-        proc_schedule();		
 }
 
 void rex_debug(uint64_t address)
 {
 	DMSG("rex debug 0x%lx\n", address);
 }
+
+struct proc *alloc_migrate_proc(void)
+{
+	uint32_t i;
+	uint32_t daif = read_daif();
+	
+	write_daif(daif | THREAD_EXCP_FOREIGN_INTR << DAIF_F_SHIFT);
+	lock_global();
+	found_mp = false;
+        for (i = 0; i < NUM_PROCS; i++)
+        {
+                if (procs[i].endpoint == -1)
+                {
+                        procs[i].endpoint = i;
+                        migrate_pid = i;
+			found_mp = true;
+			break;
+                }
+        }
+        unlock_global();
+	write_daif(daif);
+	if(i >= NUM_PROCS)
+	{
+		return NULL;
+	}
+	return &procs[i];
+}
+

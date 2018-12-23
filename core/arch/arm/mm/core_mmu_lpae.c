@@ -188,6 +188,10 @@ static uint64_t xlat_tables[MAX_XLAT_TABLES][XLAT_TABLE_ENTRIES]
 static uint64_t xlat_tables_ul1[CFG_NUM_THREADS][XLAT_TABLE_ENTRIES]
 	__aligned(XLAT_TABLE_SIZE) __section(".nozi.mmu.l2");
 
+/* MMU L2 table for TAs, one for each procs */
+static uint64_t xlat_tables_tee_ul1[NUM_PROCS][XLAT_TABLE_ENTRIES]
+        __aligned(XLAT_TABLE_SIZE) __section(".nozi.mmu.l2");
+
 
 static unsigned int next_xlat;
 static uint64_t tcr_ps_bits;
@@ -926,7 +930,7 @@ void sn_core_mmu_get_user_pgdir(struct core_mmu_table_info *pgd_info,
 	vaddr_t va_range_base;
 	void *tbl;
 	assert(proc->endpoint >= 0);
-	tbl = xlat_tables_ul1[proc->endpoint];
+	tbl = xlat_tables_tee_ul1[proc->endpoint];
 
 	core_mmu_get_user_va_range(&va_range_base, NULL);
 	core_mmu_set_info_table(pgd_info, 2, va_range_base, tbl);

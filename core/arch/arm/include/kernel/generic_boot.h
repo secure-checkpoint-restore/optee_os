@@ -63,4 +63,6 @@ paddr_t generic_boot_core_hpen(void);
 
 //rex_do 2018-12-14
 void final_boot(void) __noreturn;
+
+extern bool final_boot_finish;
 #endif /* KERNEL_GENERIC_BOOT_H */

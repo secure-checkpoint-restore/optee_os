@@ -138,6 +138,9 @@ static const struct syscall_entry tee_svc_syscall_table[] = {
 	SYSCALL_ENTRY(syscall_cache_operation),
 	//rex_do 2018-12-14
 	SYSCALL_ENTRY(syscall_tee_log),
+	SYSCALL_ENTRY(syscall_idle),
+	SYSCALL_ENTRY(syscall_test),
+	SYSCALL_ENTRY(syscall_migrate),
 };
 
 #ifdef TRACE_SYSCALLS
@@ -286,7 +289,7 @@ void tee_proc_svc_handler(struct proc *proc)
 				(TEE_SCN_MAX + 1));
 
 
-	scn = proc->uregs->x[8];
+	scn = proc->user_regs.x[8];
 	DMSG("tee svc test\n");	
 	if (scn > TEE_SCN_MAX)
 	{
@@ -297,7 +300,7 @@ void tee_proc_svc_handler(struct proc *proc)
 		DMSG("right point\n");
 		scf = tee_svc_syscall_table[scn].fn;
 	}	
-	proc->uregs->x[0] = tee_proc_svc_do_call(proc, scf);
+	proc->user_regs.x[0] = tee_proc_svc_do_call(proc, scf);
 	DMSG("svc finish\n");
 	
 }

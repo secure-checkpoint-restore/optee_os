@@ -204,9 +204,11 @@ static TEE_Result entry_invoke_command(unsigned long session_id,
 	__utee_to_param(params, &param_types, up);
 	ta_header_save_params(param_types, params);
 
+	//rex_do 2018-12-17	
+	utee_migrate(0);
 	res = TA_InvokeCommandEntryPoint(session->session_ctx, cmd_id,
 					 param_types, params);
-
+	utee_migrate(1);
 	__utee_from_param(up, param_types, params);
 	return res;
 }
@@ -259,7 +261,12 @@ void __utee_common_entry(unsigned long func, unsigned long session_id, struct ut
 
 void __utee_proc_entry(void)
 {
-//	proc_main();
-	tee_trace_ext_puts("__utee_proc_entry\n");
+	proc_main();
 
 }
+
+__weak void proc_main(void)
+{
+	tee_trace_ext_puts("proc_main error!\n");
+}
+

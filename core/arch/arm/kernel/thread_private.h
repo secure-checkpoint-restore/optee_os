@@ -269,6 +269,8 @@ struct cpu_local* get_tee_cpu(void);
 void proc_resume(struct pcb_regs *regs);
 
 void proc_init_vbar(void);
+
+void proc_check_canaries(void);
 #endif /*ASM*/
 
 #endif /*THREAD_PRIVATE_H*/

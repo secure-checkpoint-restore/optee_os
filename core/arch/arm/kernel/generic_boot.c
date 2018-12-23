@@ -781,31 +781,19 @@ static void init_cpu_vbar(void)
         write_daif(daif);
 }
 
-/*
 static void enable_secure_timer(void)
 {
         uint64_t cval; 
         uint32_t ctl = 0;
 
 
-        cval = read_cntpct_el0() + (read_cntfrq_el0() * 10);
+        cval = read_cntpct_el0() + (read_cntfrq_el0() >> 11);
         write_cntps_cval_el1(cval);
 
         ctl |= 1 << 0;
         write_cntps_ctl_el1(ctl);
 
 }
-*/
-
-/*
-static void cpu_idle(void)
-{
-	while(1)
-	{
-		asm volatile("wfi");
-	}	
-}
-*/
 
 static void show_current_el(void)
 {
@@ -815,7 +803,8 @@ static void show_current_el(void)
 	DMSG("current exception level: EL%u\n", (val & 0xf) >> 2);
 }
 
-//TODO
+bool final_boot_finish = false;
+
 void final_boot(void)
 {
     DMSG("------------------------------------------------\n");
@@ -823,13 +812,19 @@ void final_boot(void)
     show_current_el();
     init_tee_cpu();
     init_cpu_vbar(); 
-    //TODO
-    //enable_secure_timer();
 
     proc_clr_init();
-   
+     
     run();
-	 
+	
+    enable_secure_timer();
+
+    final_boot_finish = true;
+
+    while(1)
+    {
+	asm("wfi");
+    }	 
     //should not run here
 
     panic("os should not run here");

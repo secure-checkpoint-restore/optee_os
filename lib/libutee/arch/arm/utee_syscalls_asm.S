@@ -190,3 +190,9 @@
 
 	//rex_do 2018-12-14
 	UTEE_SYSCALL utee_tee_log, TEE_SCN_TEE_LOG, 2
+
+	UTEE_SYSCALL utee_idle, TEE_SCN_IDLE, 0
+	
+	UTEE_SYSCALL utee_test, TEE_SCN_TEST, 0
+
+	UTEE_SYSCALL utee_migrate, TEE_SCN_MIGRATE, 1
