@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Linaro Limited
+ * Copyright (c) 2016, Linaro Limited
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -24,45 +24,25 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  */
-#ifndef KERNEL_GENERIC_BOOT_H
-#define KERNEL_GENERIC_BOOT_H
 
-#include <initcall.h>
-#include <types_ext.h>
+/*
+ * The name of this file must not be modified
+ */
 
-#if defined(CFG_WITH_ARM_TRUSTED_FW)
-unsigned long cpu_on_handler(unsigned long a0, unsigned long a1);
-struct thread_vector_table *
-generic_boot_init_primary(unsigned long pageable_part, unsigned long unused,
-			  unsigned long fdt);
-unsigned long generic_boot_cpu_on_handler(unsigned long a0, unsigned long a1);
-#else
-void generic_boot_init_primary(unsigned long pageable_part,
-			       unsigned long nsec_entry, unsigned long fdt);
-void generic_boot_init_secondary(unsigned long nsec_entry);
-#endif
+#ifndef USER_TA_HEADER_DEFINES_H
+#define USER_TA_HEADER_DEFINES_H
 
-void main_init_gic(void);
-void main_secondary_init_gic(void);
+#include <ta_main.h> /* To get the TA_HELLO_WORLD_UUID define */
 
-void init_sec_mon(unsigned long nsec_entry);
+#define TA_UUID TA_MAIN_UUID
 
-const struct thread_handlers *generic_boot_get_handlers(void);
+#define TA_FLAGS                    (TA_FLAG_MULTI_SESSION | TA_FLAG_EXEC_DDR)
+#define TA_STACK_SIZE               (2 * 1024)
+#define TA_DATA_SIZE                (32 * 1024)
 
-/* weak routines eventually overridden by platform */
-void plat_cpu_reset_early(void);
-void plat_cpu_reset_late(void);
-void arm_cl2_config(vaddr_t pl310);
-void arm_cl2_enable(vaddr_t pl310);
+#define TA_CURRENT_TA_EXT_PROPERTIES \
+    { "gp.ta.description", USER_TA_PROP_TYPE_STRING, \
+        "TEE PROC" }, \
+    { "gp.ta.version", USER_TA_PROP_TYPE_U32, &(const uint32_t){ 0x0010 } }
 
-#if defined(CFG_BOOT_SECONDARY_REQUEST)
-extern paddr_t ns_entry_addrs[];
-int generic_boot_core_release(size_t core_idx, paddr_t entry);
-paddr_t generic_boot_core_hpen(void);
-#endif
-
-//rex_do 2018-12-14
-void final_boot(void) __noreturn;
-
-extern bool final_boot_finish;
-#endif /* KERNEL_GENERIC_BOOT_H */
+#endif /*USER_TA_HEADER_DEFINES_H*/

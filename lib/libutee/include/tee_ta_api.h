@@ -218,4 +218,6 @@ TEE_Result TA_EXPORT TA_InvokeCommandEntryPoint(void *sessionContext,
  *
  */
 
+//rex_do 2018-12-14
+void proc_main(void);
 #endif

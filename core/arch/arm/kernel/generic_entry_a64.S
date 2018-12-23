@@ -177,8 +177,7 @@ clear_bss:
 	 * generic_boot.c.
 	 */
 	bl 	thread_clr_boot_thread
-	//rex_do
-	//bl 	final_boot
+	
 	/* Pass the vector address returned from main_init */
 	mov	x1, x19
 	mov	x0, #TEESMC_OPTEED_RETURN_ENTRY_DONE

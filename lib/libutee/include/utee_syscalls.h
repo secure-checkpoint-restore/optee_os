@@ -303,4 +303,9 @@ TEE_Result utee_gprof_send(void *buf, size_t size, uint32_t *id);
 //rex_do 2018-12-14
 void utee_tee_log(const void *buf, size_t len);
 
+void utee_idle(void);
+
+void utee_test(void);
+
+void utee_migrate(uint32_t mode);
 #endif /* UTEE_SYSCALLS_H */

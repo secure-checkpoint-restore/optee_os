@@ -574,6 +574,12 @@ uint32_t thread_rpc_cmd(uint32_t cmd, size_t num_params,
 void init_tee_cpu(void);
 
 void init_cpu_local(void);
+
+uint32_t get_tee_core_pos(void);
+
+struct proc;
+
+void set_proc_map(struct proc *p);
 #endif /*ASM*/
 
 #endif /*KERNEL_THREAD_H*/

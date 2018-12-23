@@ -50,6 +50,7 @@
 #include <keep.h>
 #include <initcall.h>
 
+
 static void main_fiq(void);
 
 static const struct thread_handlers handlers = {
@@ -115,7 +116,29 @@ void main_init_gic(void)
 
 static void main_fiq(void)
 {
+	struct proc *p __maybe_unused = NULL;
 	gic_it_handle(&gic_data);
+	if(final_boot_finish && (uint32_t)get_core_pos() == get_tee_core_pos())
+	{
+		p = get_cur_proc();
+        	if(p == NULL)
+        	{
+                	DMSG("no proc running!\n");
+        	}
+        	else if(p->rt_quota == 0)
+        	{
+			p->rt_quota = 1024;
+			p->flags |= P_INTR;
+                	enqueue(p);
+        	}
+		else
+		{
+			p->flags |= P_INTR;
+                        enqueue_head(p);
+		}
+		proc_schedule();
+
+	}
 }
 
 void console_init(void)
@@ -181,6 +204,8 @@ service_init(init_tzc400);
 //rex_do 2018-12-2
 #ifdef IT_SECURE_TIMER
 
+#define SYS_COUNTER_FREQ_IN_TICKS	((1000 * 1000 * 1000) / 16)
+
 static void reset_secure_timer(void)
 {
 	uint64_t cval;
@@ -195,8 +220,7 @@ static void reset_secure_timer(void)
 
 	write_cntps_ctl_el1(0);
 	
-	/* The timer will fire every 0.5 second */
-	cval = read_cntpct_el0() + (read_cntfrq_el0() * 1);
+	cval = read_cntpct_el0() + (read_cntfrq_el0() >> 11);
 	write_cntps_cval_el1(cval);
 
 	/* Enable the secure physical timer */
@@ -208,9 +232,16 @@ static void reset_secure_timer(void)
 
 static enum itr_return timer_itr_cb(struct itr_handler *h __unused)
 {
+	struct proc *p = NULL;
         reset_secure_timer();
-
-        DMSG("###DEBUG###: cpu %" PRIu32, (uint32_t)get_core_pos());
+	p = get_cur_proc();
+	if(p != NULL)
+	{
+		if(p->rt_quota > 0)
+		{
+			p->rt_quota--;
+		}
+	}
         return ITRR_HANDLED;                       
 }
 

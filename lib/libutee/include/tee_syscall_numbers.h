@@ -101,9 +101,12 @@
 #define TEE_SCN_CACHE_OPERATION			70
 //rex_do 2018-12-14
 #define TEE_SCN_TEE_LOG 			71
+#define TEE_SCN_IDLE				72
+#define TEE_SCN_TEST                         	73
+#define TEE_SCN_MIGRATE				74
 
-//rex_do 2018-12-1
-#define TEE_SCN_MAX				71
+//rex_do 2018-12-14
+#define TEE_SCN_MAX				74
 
 /* Maximum number of allowed arguments for a syscall */
 #define TEE_SVC_MAX_ARGS			8

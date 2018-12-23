@@ -122,4 +122,7 @@ TEE_Result syscall_set_ta_time(const TEE_Time *time);
 
 //rex_do 2018-12-14
 int syscall_tee_log(struct proc *proc);
+void syscall_idle(void);
+void syscall_test(void);
+void syscall_migrate(uint32_t mode);
 #endif /* TEE_SVC_H */
